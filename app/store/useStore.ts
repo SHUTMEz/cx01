@@ -22,7 +22,7 @@ interface AppState {
   deleteCard: (id: string) => Promise<void>;
   deleteCards: (ids: string[]) => Promise<void>;
   clearAllCards: () => Promise<void>;
-  moveCardToBottom: (id: string) => Promise<void>;
+  moveCardToBottom: (id: string, direction?: "asc" | "desc") => Promise<void>;
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
 }
 
@@ -37,13 +37,14 @@ export const useStore = create<AppState>((set, get) => ({
     set({ cards: await loadCards(), settings: await loadSettings(), ready: true });
   },
   addCard: async (card) => {
-    await saveCard(card);
-    set((state) => ({ cards: [card, ...state.cards] }));
+    const persisted = { ...card, sortOrder: card.sortOrder ?? card.createdAt };
+    await saveCard(persisted);
+    set((state) => ({ cards: [persisted, ...state.cards] }));
   },
   updateCard: async (id, updatedCard) => {
     const card = get().cards.find((item) => item.id === id);
     if (!card) return;
-    const updated = { ...card, ...updatedCard };
+    const updated = { ...card, ...updatedCard, sortOrder: updatedCard.sortOrder ?? card.sortOrder ?? card.createdAt };
     await saveCard(updated);
     set((state) => ({ cards: state.cards.map((item) => item.id === id ? updated : item) }));
   },
@@ -59,13 +60,15 @@ export const useStore = create<AppState>((set, get) => ({
     await clearCards();
     set({ cards: [] });
   },
-  moveCardToBottom: async (id) => {
-    const index = get().cards.findIndex((card) => card.id === id);
-    if (index < 0) return;
-    const cards = [...get().cards];
-    const [card] = cards.splice(index, 1);
-    cards.push(card);
-    set({ cards });
+  moveCardToBottom: async (id, direction = "desc") => {
+    const current = get().cards;
+    const card = current.find((item) => item.id === id);
+    if (!card) return;
+    const orders = current.map((item) => item.sortOrder ?? item.createdAt);
+    const nextOrder = direction === "desc" ? Math.min(...orders) - 1 : Math.max(...orders) + 1;
+    const updated = { ...card, sortOrder: nextOrder };
+    await saveCard(updated);
+    set((state) => ({ cards: state.cards.map((item) => item.id === id ? updated : item) }));
   },
   updateSettings: async (value) => {
     const settings = { ...get().settings, ...value };

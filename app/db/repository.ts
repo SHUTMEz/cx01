@@ -10,20 +10,21 @@ const defaultSettings: Settings = {
   useEndText: true,
   exportPath: null,
   theme: "light",
-  categories: ["Seafood", "Pork", "Chicken", "Promotion", "Other"],
+  categories: [],
 };
 
 type LegacyState = { state?: { cards?: Card[]; settings?: Settings; machineId?: string; license?: Card["exportedPath"] } };
 
 export async function loadCards(): Promise<Card[]> {
   const database = await getDatabase();
-  const rows = await database.select().from(cards).orderBy(desc(cards.createdAt));
+  const rows = await database.select().from(cards).orderBy(desc(cards.sortOrder));
   const images = await database.select().from(cardImages).orderBy(asc(cardImages.sortOrder));
   return rows.map((row) => ({
     id: row.id,
     text: row.text,
     category: row.category,
     createdAt: row.createdAt,
+    sortOrder: row.sortOrder,
     exportedPath: row.exportedPath ?? undefined,
     count: row.count,
     images: images.filter((image) => image.cardId === row.id && image.isStart === 0).map((image) => image.src),
@@ -74,9 +75,11 @@ export async function saveCard(card: Card): Promise<void> {
   const database = await getDatabase();
   await database.insert(cards).values({
     id: card.id, text: card.text, category: card.category, createdAt: card.createdAt,
+    sortOrder: card.sortOrder ?? card.createdAt,
     exportedPath: card.exportedPath ?? null, count: card.count ?? 0,
   }).onConflictDoUpdate({ target: cards.id, set: {
-    text: card.text, category: card.category, exportedPath: card.exportedPath ?? null, count: card.count ?? 0,
+    text: card.text, category: card.category, sortOrder: card.sortOrder ?? card.createdAt,
+    exportedPath: card.exportedPath ?? null, count: card.count ?? 0,
   }});
   await database.delete(cardImages).where(eq(cardImages.cardId, card.id));
   const imageRows = [

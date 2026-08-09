@@ -8,10 +8,12 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Settings01Icon, Image01Icon, Txt01Icon, Folder01Icon, Delete02Icon, Add01Icon } from "@hugeicons-pro/core-solid-rounded";
 import { open } from "@tauri-apps/plugin-dialog";
 import { deleteCardImages, deleteExportedFolder } from "../utils/imageStorage";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { cards, settings, updateSettings, deleteCards } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [pendingDeleteCategory, setPendingDeleteCategory] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -21,20 +23,27 @@ export default function SettingsPage() {
 
   const handleDeleteCategory = async (category: string) => {
     const affectedCards = cards.filter((card) => card.category === category);
-    const confirmed = window.confirm(
-      affectedCards.length
-        ? `Delete category "${category}" and ${affectedCards.length} card(s)?`
-        : `Delete category "${category}"?`
-    );
-    if (!confirmed) return;
 
-    await Promise.all(affectedCards.flatMap((card) => [
+    // File cleanup is best-effort. A missing/locked file must not block
+    // deleting the category and its database records.
+    await Promise.allSettled(affectedCards.flatMap((card) => [
       deleteCardImages(card.id),
       ...(card.exportedPath ? [deleteExportedFolder(card.exportedPath)] : []),
     ]));
-    await deleteCards(affectedCards.map((card) => card.id));
-    await updateSettings({ categories: (settings.categories || []).filter((item) => item !== category) });
+    try {
+      await deleteCards(affectedCards.map((card) => card.id));
+      await updateSettings({ categories: (settings.categories || []).filter((item) => item !== category) });
+      setPendingDeleteCategory(null);
+      toast.success("Category deleted");
+    } catch (error) {
+      console.error("Failed to delete category", error);
+      toast.error("Could not delete category");
+    }
   };
+
+  const pendingCards = pendingDeleteCategory
+    ? cards.filter((card) => card.category === pendingDeleteCategory).length
+    : 0;
 
   return (
     <motion.div
@@ -127,7 +136,7 @@ export default function SettingsPage() {
                 <div key={cat} className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-[var(--input)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-sm">
                   <span className="text-xs text-[var(--foreground)] font-medium">{cat}</span>
                   <button
-                    onClick={() => void handleDeleteCategory(cat)}
+                    onClick={() => setPendingDeleteCategory(cat)}
                     className="w-6 h-6 flex items-center justify-center rounded text-[var(--muted-foreground)] hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
                   >
                     <HugeiconsIcon icon={Delete02Icon} size={14} />
@@ -171,6 +180,21 @@ export default function SettingsPage() {
         </div>
 
       </div>
+
+      {pendingDeleteCategory && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4" onMouseDown={() => setPendingDeleteCategory(null)}>
+          <div className="w-full max-w-sm rounded-[var(--radius-xl)] border border-[var(--border)] bg-[var(--card)] p-5 shadow-xl" onMouseDown={(event) => event.stopPropagation()}>
+            <h2 className="text-base font-bold text-[var(--foreground)]">Delete category?</h2>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+              Delete “{pendingDeleteCategory}”{pendingCards ? ` and ${pendingCards} card(s)` : ""}? This cannot be undone.
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button type="button" onClick={() => setPendingDeleteCategory(null)} className="h-9 rounded-[var(--radius-md)] border border-[var(--border)] px-4 text-sm text-[var(--foreground)] hover:bg-[var(--muted)]">Cancel</button>
+              <button type="button" onClick={() => void handleDeleteCategory(pendingDeleteCategory)} className="h-9 rounded-[var(--radius-md)] bg-[var(--danger)] px-4 text-sm font-semibold text-white hover:brightness-110">Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }

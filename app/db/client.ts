@@ -35,6 +35,7 @@ export async function initializeDatabase(): Promise<void> {
       text TEXT NOT NULL DEFAULT '',
       category TEXT NOT NULL DEFAULT 'Other',
       created_at INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0,
       exported_path TEXT,
       count INTEGER NOT NULL DEFAULT 0
     )
@@ -51,4 +52,10 @@ export async function initializeDatabase(): Promise<void> {
     `CREATE INDEX IF NOT EXISTS card_images_card_id_idx ON card_images(card_id, sort_order)`,
   ];
   for (const statement of statements) await database.execute(statement);
+  try {
+    await database.execute("ALTER TABLE cards ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+  } catch {
+    // Existing databases already have the column.
+  }
+  await database.execute("UPDATE cards SET sort_order = created_at WHERE sort_order = 0");
 }

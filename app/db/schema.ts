@@ -5,6 +5,7 @@ export const cards = sqliteTable("cards", {
   text: text("text").notNull().default(""),
   category: text("category").notNull().default("Other"),
   createdAt: integer("created_at").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
   exportedPath: text("exported_path"),
   count: integer("count").notNull().default(0),
 });

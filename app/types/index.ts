@@ -5,6 +5,7 @@ export interface Card {
   text: string;
   category: string;
   createdAt: number;
+  sortOrder?: number;
   exportedPath?: string;
   count?: number;
 }

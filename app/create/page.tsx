@@ -218,7 +218,13 @@ export default function CreateCardPage() {
           <input type="checkbox" checked={settings.useEndText} onChange={(event) => void updateSettings({ useEndText: event.target.checked })} className="accent-[var(--primary)]" />
           Use footer text
         </label>
-        <TextEditor value={text} onChange={setText} placeholder="Enter product name, description, price..." />
+        <TextEditor
+          value={text}
+          onChange={setText}
+          categories={settings.categories || []}
+          onSelectCategory={setCategory}
+          placeholder="Enter product name, description, price..."
+        />
       </section>
 
       <section className="flex flex-col gap-3">

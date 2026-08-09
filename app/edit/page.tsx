@@ -57,7 +57,9 @@ function EditCardForm() {
       setImages(card.images.map((src) => ({ id: uuidv4(), src })));
       setText(card.text);
       setCategory(card.category);
-      setSelectedStartImages(card.startImages?.length ? card.startImages : settings.startPhotos || []);
+      // Edit must reflect this card's saved selection. An empty selection means none,
+      // never fall back to selecting every image from Settings.
+      setSelectedStartImages(card.startImages ?? []);
     }
   }, [cards, id]);
 
@@ -212,7 +214,13 @@ function EditCardForm() {
           <input type="checkbox" checked={settings.useEndText} onChange={(event) => void updateSettings({ useEndText: event.target.checked })} className="accent-[var(--primary)]" />
           Use footer text
         </label>
-        <TextEditor value={text} onChange={setText} placeholder="Enter product name, description, price..." />
+        <TextEditor
+          value={text}
+          onChange={setText}
+          categories={settings.categories || []}
+          onSelectCategory={setCategory}
+          placeholder="Enter product name, description, price..."
+        />
       </section>
 
       <section className="flex flex-col gap-3">

@@ -96,7 +96,9 @@ export default function HomePage() {
   });
 
   const sortedCards = [...filteredCards].sort((a, b) => {
-    return orderDirection === "desc" ? b.createdAt - a.createdAt : a.createdAt - b.createdAt;
+    const aOrder = a.sortOrder ?? a.createdAt;
+    const bOrder = b.sortOrder ?? b.createdAt;
+    return orderDirection === "desc" ? bOrder - aOrder : aOrder - bOrder;
   });
 
   const pageCount = Math.max(1, Math.ceil(sortedCards.length / pageSize));
@@ -283,7 +285,7 @@ export default function HomePage() {
 
                       <Tooltip content="To Bottom">
                         <button
-                          onClick={() => moveCardToBottom(card.id)}
+                          onClick={() => void moveCardToBottom(card.id, orderDirection)}
                           className="w-7 h-9 flex items-center justify-center rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background)] hover:shadow-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all shadow-sm"
                           aria-label="Move to bottom"
                         >
@@ -418,7 +420,7 @@ export default function HomePage() {
                             </button>
                           </Tooltip>
                           <Tooltip content="To Bottom">
-                            <button onClick={() => moveCardToBottom(card.id)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+                            <button onClick={() => void moveCardToBottom(card.id, orderDirection)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
                               <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
                             </button>
                           </Tooltip>
