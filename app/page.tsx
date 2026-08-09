@@ -24,11 +24,12 @@ import {
 } from "@hugeicons-pro/core-solid-rounded";
 import { Card } from "./types";
 import { toast } from "sonner";
-import { getImageSrc, deleteCardImages, deleteExportedFolder } from "./utils/imageStorage";
+import { deleteCardImages, deleteExportedFolder } from "./utils/imageStorage";
 import { invoke } from "@tauri-apps/api/core";
 import { Tooltip } from "./components/Tooltip";
 import { useContextMenu } from "./components/ContextMenu";
 import CustomSelect from "./components/CustomSelect";
+import StoredImage from "./components/StoredImage";
 
 function getDragImagePaths(images: string[], exportedPath?: string): string[] {
   const storedPaths = images.filter((src) => !src.startsWith("data:"));
@@ -216,6 +217,7 @@ export default function HomePage() {
               return (
                             <motion.div
                               key={card.id}
+                              layout
                               initial={false}
                               animate={{ opacity: 1 }}
                               whileHover={{ y: -2, transition: { duration: 0.1 } }}
@@ -224,8 +226,8 @@ export default function HomePage() {
                             >
                               <div className="relative aspect-video bg-[var(--input)] flex items-center justify-center overflow-hidden">
                                 {fullImages.length > 0 ? (
-                    <img 
-                      src={getImageSrc(fullImages[0])} 
+                    <StoredImage 
+                      src={fullImages[0]} 
                       alt="Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -295,12 +297,14 @@ export default function HomePage() {
                       </div>
 
                       <Tooltip content="To Bottom">
-                        <button
-                          onClick={() => void moveCardToBottom(card.id, orderDirection)}
-                          className="w-7 h-9 flex items-center justify-center rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background)] hover:shadow-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all shadow-sm"
+                            <button
+                              onClick={() => void moveCardToBottom(card.id, orderDirection)}
+                          className="w-7 h-9 flex items-center justify-center rounded-md bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--background)] active:scale-90 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-all shadow-sm"
                           aria-label="Move to bottom"
                         >
-                          <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+                            <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 0.7, ease: "easeInOut" }}>
+                              <HugeiconsIcon icon={ArrowDown01Icon} size={16} />
+                            </motion.span>
                         </button>
                       </Tooltip>
 
@@ -378,6 +382,7 @@ export default function HomePage() {
                   return (
                     <motion.tr
                       key={card.id}
+                      layout
                       initial={false}
                       data-card-id={card.id}
                       className="border-b border-[var(--border)] last:border-0 hover:bg-[var(--surface)] transition-colors group"
@@ -385,7 +390,7 @@ export default function HomePage() {
                       <td className="px-4 py-3 text-[var(--muted-foreground)] font-mono">{index + 1}</td>
                       <td className="px-4 py-3">
                         {fullImages.length > 0 ? (
-                          <img src={getImageSrc(fullImages[0])} alt="" className="w-10 h-10 object-cover rounded-[var(--radius-md)]" />
+                          <StoredImage src={fullImages[0]} alt="" className="w-10 h-10 object-cover rounded-[var(--radius-md)]" />
                         ) : (
                           <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--input)] flex items-center justify-center">
                             <HugeiconsIcon icon={Image02Icon} size={16} className="text-[var(--muted-foreground)]" />
@@ -425,8 +430,10 @@ export default function HomePage() {
                             </button>
                           </Tooltip>
                           <Tooltip content="To Bottom">
-                            <button onClick={() => void moveCardToBottom(card.id, orderDirection)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
-                              <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+                            <button onClick={() => void moveCardToBottom(card.id, orderDirection)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] active:scale-90 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+                              <motion.span animate={{ y: [0, 2, 0] }} transition={{ duration: 0.7, ease: "easeInOut" }}>
+                                <HugeiconsIcon icon={ArrowDown01Icon} size={14} />
+                              </motion.span>
                             </button>
                           </Tooltip>
 
