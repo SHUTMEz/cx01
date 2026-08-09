@@ -141,7 +141,8 @@ export function getImageSrc(filePath: string): string {
   if (filePath.startsWith("data:")) {
     return filePath;
   }
-  return convertFileSrc(filePath);
+  // Tauri asset URLs need POSIX separators even when the local path is Windows-style.
+  return convertFileSrc(filePath.replaceAll("\\", "/"));
 }
 
 export async function deleteExportedFolder(folderPath: string): Promise<void> {

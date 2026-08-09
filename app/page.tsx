@@ -208,7 +208,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
           <AnimatePresence>
             {visibleCards.map((card) => {
-              const fullImages = [...(card.startImages || []), ...card.images];
+              const fullImages = card.images;
               const dateObj = new Date(card.createdAt);
               const dateStr = dateObj.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
               const timeStr = dateObj.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' });
@@ -225,7 +225,7 @@ export default function HomePage() {
                               <div className="relative aspect-video bg-[var(--input)] flex items-center justify-center overflow-hidden">
                                 {fullImages.length > 0 ? (
                     <img 
-                      src={getImageSrc(fullImages.length > 1 ? fullImages[1] : fullImages[0])} 
+                      src={getImageSrc(fullImages[0])} 
                       alt="Preview" 
                       className="w-full h-full object-cover"
                     />
@@ -371,7 +371,7 @@ export default function HomePage() {
             <tbody>
               <AnimatePresence>
                 {visibleCards.map((card, index) => {
-                  const fullImages = [...(card.startImages || []), ...card.images];
+                  const fullImages = card.images;
                   const dateObj = new Date(card.createdAt);
                   const dateStr = dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
                   const timeStr = dateObj.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
