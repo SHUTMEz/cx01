@@ -59,9 +59,9 @@ export async function loadSettings(): Promise<Settings> {
 }
 
 export async function saveSettings(value: Settings): Promise<void> {
-  await Promise.all(Object.entries(value)
-    .filter(([, item]) => item !== undefined)
-    .map(([key, item]) => setSetting(key, item)));
+  for (const [key, item] of Object.entries(value)) {
+    if (item !== undefined) await setSetting(key, item);
+  }
 }
 
 export async function getPersistentValue<T>(key: string, fallback: T): Promise<T> {
@@ -123,16 +123,23 @@ export async function migrateCardImageFiles(): Promise<void> {
 }
 
 export async function migrateLegacyStorage(): Promise<void> {
+  if (await getSetting("legacyMigrationDone", false)) return;
+
   const database = await getDatabase();
   const existing = await database.select({ id: cards.id }).from(cards).limit(1);
-  if (existing.length) return;
+  if (existing.length) {
+    await setSetting("legacyMigrationDone", true);
+    return;
+  }
   const rawLegacy = await get<string>("crtl-storage");
   let legacy: LegacyState | null = null;
   try { legacy = rawLegacy ? JSON.parse(rawLegacy) as LegacyState : null; } catch { legacy = null; }
   const state = legacy?.state;
-  if (!state) return;
-  for (const card of state.cards ?? []) await saveCard(card);
-  await saveSettings({ ...defaultSettings, ...(state.settings ?? {}) });
+  if (state) {
+    for (const card of state.cards ?? []) await saveCard(card);
+    await saveSettings({ ...defaultSettings, ...(state.settings ?? {}) });
+  }
+  await setSetting("legacyMigrationDone", true);
 }
 
 export { defaultSettings, initializeDatabase };
