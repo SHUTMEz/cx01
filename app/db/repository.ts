@@ -3,6 +3,7 @@ import { get } from "idb-keyval";
 import { Card, Settings } from "../types";
 import { getDatabase, initializeDatabase } from "./client";
 import { cardImages, cards, settings } from "./schema";
+import { saveCardImages } from "../utils/imageStorage";
 
 const defaultSettings: Settings = {
   endText: "",
@@ -98,6 +99,27 @@ export async function removeCard(id: string): Promise<void> {
 export async function clearCards(ids?: string[]): Promise<void> {
   const current = await loadCards();
   await Promise.all((ids ?? current.map((card) => card.id)).map(removeCard));
+}
+
+export async function migrateCardImageFiles(): Promise<void> {
+  const current = await loadCards();
+  for (const card of current) {
+    const startImages = card.startImages ?? [];
+    const images = card.images ?? [];
+    const allImages = [...startImages, ...images];
+    if (!allImages.length || !allImages.some((src) => src.startsWith("data:"))) continue;
+
+    try {
+      const savedPaths = await saveCardImages(card.id, allImages);
+      await saveCard({
+        ...card,
+        startImages: savedPaths.slice(0, startImages.length),
+        images: savedPaths.slice(startImages.length),
+      });
+    } catch (error) {
+      console.error("Failed to migrate card images", card.id, error);
+    }
+  }
 }
 
 export async function migrateLegacyStorage(): Promise<void> {

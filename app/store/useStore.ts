@@ -6,6 +6,7 @@ import {
   initializeDatabase,
   loadCards,
   loadSettings,
+  migrateCardImageFiles,
   migrateLegacyStorage,
   removeCard,
   saveCard,
@@ -34,6 +35,7 @@ export const useStore = create<AppState>((set, get) => ({
     if (get().ready) return;
     await initializeDatabase();
     await migrateLegacyStorage();
+    await migrateCardImageFiles();
     set({ cards: await loadCards(), settings: await loadSettings(), ready: true });
   },
   addCard: async (card) => {

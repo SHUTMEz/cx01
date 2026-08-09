@@ -29,6 +29,7 @@ import { SortableImageItem } from "../components/SortableImageItem";
 import { CategorySelect } from "../components/CategorySelect";
 import StartImageSelector from "../components/StartImageSelector";
 import TextEditor from "../components/TextEditor";
+import { saveCardImages } from "../utils/imageStorage";
 
 interface ImageObj {
   id: string;
@@ -122,6 +123,20 @@ export default function CreateCardPage() {
   };
 
   const handleSave = async () => {
+    const cardId = uuidv4();
+    const rawStartImages = selectedStartImages;
+    const rawImages = images.map((i) => i.src);
+    let savedStartImages = rawStartImages;
+    let savedImages = rawImages;
+
+    try {
+      const savedPaths = await saveCardImages(cardId, [...rawStartImages, ...rawImages]);
+      savedStartImages = savedPaths.slice(0, rawStartImages.length);
+      savedImages = savedPaths.slice(rawStartImages.length);
+    } catch (err) {
+      console.error("Failed to save card images", err);
+    }
+
     let finalExportedPath: string | undefined = undefined;
 
     if (settings.exportPath) {
@@ -139,9 +154,9 @@ export default function CreateCardPage() {
     }
 
     await addCard({
-      id: uuidv4(),
-      images: images.map((i) => i.src),
-      startImages: selectedStartImages,
+      id: cardId,
+      images: savedImages,
+      startImages: savedStartImages,
       text: text.trim(),
       category: category || "Other",
       createdAt: Date.now(),

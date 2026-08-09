@@ -30,6 +30,17 @@ import { Tooltip } from "./components/Tooltip";
 import { useContextMenu } from "./components/ContextMenu";
 import CustomSelect from "./components/CustomSelect";
 
+function getDragImagePaths(images: string[], exportedPath?: string): string[] {
+  const storedPaths = images.filter((src) => !src.startsWith("data:"));
+  if (storedPaths.length === images.length) return storedPaths;
+  if (!exportedPath) return storedPaths;
+  return images.map((src, index) => {
+    const match = src.match(/data:image\/([a-zA-Z]+);/);
+    const ext = match ? match[1] : "jpeg";
+    return `${exportedPath}\\${index + 1}.${ext}`;
+  });
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { cards, deleteCard, updateCard, moveCardToBottom, settings, updateSettings, ready } = useStore();
@@ -293,7 +304,7 @@ export default function HomePage() {
                         </button>
                       </Tooltip>
 
-                      {!card.exportedPath ? (
+                      {!fullImages.length ? (
                       <div className="flex items-center gap-1">
                         <Tooltip content="Copy">
                           <button
@@ -313,14 +324,8 @@ export default function HomePage() {
                             onDragStart={async (e) => {
                               e.preventDefault();
                               try {
-                                const dir = card.exportedPath!;
-                                const imagePaths: string[] = [];
-                                for (let idx = 0; idx < fullImages.length; idx++) {
-                                  const ext = fullImages[idx].match(/data:image\/([a-zA-Z]+);/)
-                                    ? fullImages[idx].match(/data:image\/([a-zA-Z]+);/)![1]
-                                    : "jpeg";
-                                  imagePaths.push(`${dir}\\${idx + 1}.${ext}`);
-                                }
+                                const imagePaths = getDragImagePaths(fullImages, card.exportedPath);
+                                if (!imagePaths.length) return;
                                 await invoke("start_drag", { paths: imagePaths });
                               } catch (err) {
                                 console.error("Native drag failed", err);
@@ -425,7 +430,7 @@ export default function HomePage() {
                             </button>
                           </Tooltip>
 
-                          {!card.exportedPath ? (
+                          {!fullImages.length ? (
                             <>
                               <Tooltip content="Copy">
                                 <button onClick={() => handleCopyText(card)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
@@ -441,14 +446,8 @@ export default function HomePage() {
                                   onDragStart={async (e) => {
                                     e.preventDefault();
                                     try {
-                                      const dir = card.exportedPath!;
-                                      const imagePaths: string[] = [];
-                                      for (let idx = 0; idx < fullImages.length; idx++) {
-                                        const ext = fullImages[idx].match(/data:image\/([a-zA-Z]+);/)
-                                          ? fullImages[idx].match(/data:image\/([a-zA-Z]+);/)![1]
-                                          : "jpeg";
-                                        imagePaths.push(`${dir}\\${idx + 1}.${ext}`);
-                                      }
+                                      const imagePaths = getDragImagePaths(fullImages, card.exportedPath);
+                                      if (!imagePaths.length) return;
                                       await invoke("start_drag", { paths: imagePaths });
                                     } catch (err) {
                                       console.error("Native drag failed", err);
