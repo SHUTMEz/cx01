@@ -13,11 +13,16 @@ import { toast } from "sonner";
 export default function SettingsPage() {
   const { cards, settings, updateSettings, deleteCards } = useStore();
   const [mounted, setMounted] = useState(false);
+  const [draft, setDraft] = useState(settings);
   const [pendingDeleteCategory, setPendingDeleteCategory] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    setDraft(settings);
+  }, [settings]);
 
   if (!mounted) return null;
 
@@ -32,7 +37,7 @@ export default function SettingsPage() {
     ]));
     try {
       await deleteCards(affectedCards.map((card) => card.id));
-      await updateSettings({ categories: (settings.categories || []).filter((item) => item !== category) });
+    setDraft((current) => ({ ...current, categories: (current.categories || []).filter((item) => item !== category) }));
       setPendingDeleteCategory(null);
       toast.success("Category deleted");
     } catch (error) {
@@ -44,6 +49,11 @@ export default function SettingsPage() {
   const pendingCards = pendingDeleteCategory
     ? cards.filter((card) => card.category === pendingDeleteCategory).length
     : 0;
+
+  const saveDraft = async () => {
+    await updateSettings(draft);
+    toast.success("Settings saved");
+  };
 
   return (
     <motion.div
@@ -69,19 +79,19 @@ export default function SettingsPage() {
             <h2 className="text-sm font-bold text-[var(--foreground)]">Export Folder</h2>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:ml-auto w-full sm:w-auto mt-1 sm:mt-0">
-            {settings.exportPath && (
-              <span className="text-xs text-[var(--muted-foreground)] max-w-full sm:max-w-[250px] truncate" title={settings.exportPath}>
-                {settings.exportPath}
+            {draft.exportPath && (
+              <span className="text-xs text-[var(--muted-foreground)] max-w-full sm:max-w-[250px] truncate" title={draft.exportPath}>
+                {draft.exportPath}
               </span>
             )}
             <button
               onClick={async () => {
                 const selected = await open({ directory: true, multiple: false });
-                if (selected && typeof selected === "string") updateSettings({ exportPath: selected });
+                if (selected && typeof selected === "string") setDraft((current) => ({ ...current, exportPath: selected }));
               }}
               className="w-full sm:w-auto px-4 h-8 shrink-0 bg-[var(--input)] hover:bg-[var(--muted)] text-[var(--foreground)] text-xs font-bold rounded-[var(--radius-md)] transition-colors border border-[var(--border)] whitespace-nowrap shadow-sm"
             >
-              {settings.exportPath ? "Change" : "Select Folder"}
+              {draft.exportPath ? "Change" : "Select Folder"}
             </button>
           </div>
         </div>
@@ -96,8 +106,8 @@ export default function SettingsPage() {
           </div>
           <div className="pl-0 sm:pl-11 w-full">
             <ImageUploader
-              images={settings.startPhotos || []}
-              onChange={(imgs) => updateSettings({ startPhotos: imgs })}
+              images={draft.startPhotos || []}
+              onChange={(imgs) => setDraft((current) => ({ ...current, startPhotos: imgs }))}
               multiple={true}
             />
           </div>
@@ -113,8 +123,8 @@ export default function SettingsPage() {
           </div>
           <div className="pl-0 sm:pl-11 w-full">
             <textarea
-              value={settings.endText}
-              onChange={(e) => updateSettings({ endText: e.target.value })}
+              value={draft.endText}
+              onChange={(e) => setDraft((current) => ({ ...current, endText: e.target.value }))}
               placeholder="🙏 ขอบคุณลูกค้าทุกท่าน\nพร้อมส่งทั่วไทย 🇹🇭"
               className="w-full min-h-[100px] bg-[var(--input)] border border-[var(--border)] rounded-[var(--radius-lg)] p-3 text-xs text-[var(--foreground)] placeholder-[var(--muted-foreground)] focus:outline-none focus:border-[var(--info)] transition-all resize-none shadow-sm"
             />
@@ -132,7 +142,7 @@ export default function SettingsPage() {
           
           <div className="pl-0 sm:pl-11 flex flex-col gap-3 w-full">
             <div className="flex flex-wrap gap-2">
-              {settings.categories?.map((cat) => (
+              {draft.categories?.map((cat) => (
                 <div key={cat} className="flex items-center gap-1.5 pl-3 pr-1 py-1 bg-[var(--input)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-sm">
                   <span className="text-xs text-[var(--foreground)] font-medium">{cat}</span>
                   <button
@@ -154,8 +164,8 @@ export default function SettingsPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     const val = (e.target as HTMLInputElement).value.trim();
-                    if (val && !settings.categories?.includes(val)) {
-                      updateSettings({ categories: [...(settings.categories || []), val] });
+                    if (val && !draft.categories?.includes(val)) {
+                      setDraft((current) => ({ ...current, categories: [...(current.categories || []), val] }));
                       (e.target as HTMLInputElement).value = "";
                     }
                   }
@@ -165,8 +175,8 @@ export default function SettingsPage() {
                 onClick={() => {
                   const input = document.getElementById("new-category") as HTMLInputElement;
                   const val = input.value.trim();
-                  if (val && !settings.categories?.includes(val)) {
-                    updateSettings({ categories: [...(settings.categories || []), val] });
+                  if (val && !draft.categories?.includes(val)) {
+                    setDraft((current) => ({ ...current, categories: [...(current.categories || []), val] }));
                     input.value = "";
                   }
                 }}
@@ -179,6 +189,12 @@ export default function SettingsPage() {
           </div>
         </div>
 
+      </div>
+
+      <div className="flex justify-end">
+        <button type="button" onClick={() => void saveDraft()} className="h-10 rounded-[var(--radius-md)] bg-[var(--primary)] px-5 text-sm font-semibold text-[var(--primary-foreground)] hover:brightness-110 shadow-sm">
+          Save settings
+        </button>
       </div>
 
       {pendingDeleteCategory && (

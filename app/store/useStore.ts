@@ -13,6 +13,8 @@ import {
   saveSettings,
 } from "../db/repository";
 
+let settingsWriteQueue: Promise<void> = Promise.resolve();
+
 interface AppState {
   cards: Card[];
   settings: Settings;
@@ -74,7 +76,13 @@ export const useStore = create<AppState>((set, get) => ({
   },
   updateSettings: async (value) => {
     const settings = { ...get().settings, ...value };
-    await saveSettings(settings);
+    // Update the UI immediately, then serialize writes so rapid typing/clicks
+    // cannot race and overwrite newer settings with an older snapshot.
     set({ settings });
+    const write = settingsWriteQueue.then(() => saveSettings(settings));
+    settingsWriteQueue = write.catch((error) => {
+      console.error("Failed to persist settings", error);
+    });
+    await write;
   },
 }));
