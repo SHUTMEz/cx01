@@ -1,8 +1,8 @@
 import { asc, desc, eq } from "drizzle-orm";
 import { get } from "idb-keyval";
 import { Card, Settings } from "../types";
-import { getDatabase, initializeDatabase } from "./client";
-import { cardImages, cards, settings } from "./schema";
+import { getDatabase, getNativeDatabase, initializeDatabase } from "./client";
+import { cardImages, cards } from "./schema";
 import { saveCardImages } from "../utils/imageStorage";
 
 const defaultSettings: Settings = {
@@ -34,16 +34,19 @@ export async function loadCards(): Promise<Card[]> {
 }
 
 async function getSetting<T>(key: string, fallback: T): Promise<T> {
-  const database = await getDatabase();
-  const row = await database.select().from(settings).where(eq(settings.key, key)).get();
-  if (!row) return fallback;
-  try { return JSON.parse(row.value) as T; } catch { return fallback; }
+  const database = await getNativeDatabase();
+  const rows = await database.select<{ value: string }[]>("SELECT value FROM settings WHERE key = ?", [key]);
+  const value = rows[0]?.value;
+  if (value === undefined) return fallback;
+  try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
 async function setSetting(key: string, value: unknown): Promise<void> {
-  const database = await getDatabase();
-  await database.insert(settings).values({ key, value: JSON.stringify(value) })
-    .onConflictDoUpdate({ target: settings.key, set: { value: JSON.stringify(value) } });
+  const database = await getNativeDatabase();
+  await database.execute(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, JSON.stringify(value)],
+  );
 }
 
 export async function loadSettings(): Promise<Settings> {

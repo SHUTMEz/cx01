@@ -5,7 +5,7 @@ import { schema } from "./schema";
 let databasePromise: Promise<Database> | null = null;
 let drizzleDatabase: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-async function getNativeDatabase(): Promise<Database> {
+export async function getNativeDatabase(): Promise<Database> {
   databasePromise ??= Database.load("sqlite:crtl.db");
   return databasePromise;
 }
