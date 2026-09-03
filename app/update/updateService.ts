@@ -63,7 +63,7 @@ export function parseRelease(payload: unknown): UpdateRelease | null {
 }
 
 export function selectWindowsInstaller(release: UpdateRelease | null): string | null {
-  const asset = release?.assets.find((item) => /^(?:MRYX[_ ]CNPSF|crtl)_[^/]+_x64-setup\.exe$/i.test(item.name) && isAllowedUpdateUrl(item.url));
+  const asset = release?.assets.find((item) => /^(?:MRYX[_. ]CNPSF|crtl)_[^/]+_x64-setup\.exe$/i.test(item.name) && isAllowedUpdateUrl(item.url));
   return asset?.url || null;
 }
 

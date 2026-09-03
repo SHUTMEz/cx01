@@ -21,6 +21,18 @@ test("accepts a published stable GitHub release and selects the NSIS installer",
   assert.equal(selectWindowsInstaller(release), "https://github.com/SHUTMEz/cx01/releases/download/v1.0.5/MRYX_CNPSF_1.0.5_x64-setup.exe");
 });
 
+test("selects the installer name normalized by GitHub with dots", () => {
+  const release = parseRelease({
+    tag_name: "v1.0.6",
+    name: "MRYX : CNPSF v1.0.6",
+    body: "Updater fix",
+    draft: false,
+    prerelease: false,
+    assets: [{ name: "MRYX.CNPSF_1.0.6_x64-setup.exe", browser_download_url: "https://github.com/SHUTMEz/cx01/releases/download/v1.0.6/MRYX.CNPSF_1.0.6_x64-setup.exe" }],
+  });
+  assert.equal(selectWindowsInstaller(release), "https://github.com/SHUTMEz/cx01/releases/download/v1.0.6/MRYX.CNPSF_1.0.6_x64-setup.exe");
+});
+
 test("rejects prereleases, malformed releases, and unsafe update URLs", () => {
   assert.equal(parseRelease({ tag_name: "v1.0.5", draft: false, prerelease: true, assets: [] }), null);
   assert.equal(parseRelease({ tag_name: "latest", draft: false, prerelease: false, assets: [] }), null);
