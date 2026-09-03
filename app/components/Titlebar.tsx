@@ -20,10 +20,11 @@ import { useRouter, usePathname } from "next/navigation";
 
 interface TitlebarProps {
   icon?: IconSvgElement;
+  logoSrc?: string;
   title?: string;
 }
 
-export default function Titlebar({ icon, title }: TitlebarProps) {
+export default function Titlebar({ icon, logoSrc, title }: TitlebarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFocused, setIsFocused] = useState(true);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -151,7 +152,9 @@ export default function Titlebar({ icon, title }: TitlebarProps) {
         ${isFocused ? "bg-[var(--surface)]" : "bg-[var(--background)]"}`}
     >
       <div data-tauri-drag-region className="flex flex-1 items-center justify-start h-full pl-4 gap-2">
-        {icon && (
+        {logoSrc ? (
+          <img src={logoSrc} alt="" className="h-[18px] w-[18px] rounded-[5px] object-cover" />
+        ) : icon && (
           <HugeiconsIcon
             icon={icon}
             size={18}

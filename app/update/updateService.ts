@@ -56,14 +56,14 @@ export function parseRelease(payload: unknown): UpdateRelease | null {
   });
   return {
     version,
-    name: typeof value.name === "string" ? value.name : `crtl v${version}`,
+    name: typeof value.name === "string" ? value.name : `MRYX : CNPSF v${version}`,
     notes: typeof value.body === "string" ? value.body : "",
     assets,
   };
 }
 
 export function selectWindowsInstaller(release: UpdateRelease | null): string | null {
-  const asset = release?.assets.find((item) => /^crtl_[^/]+_x64-setup\.exe$/i.test(item.name) && isAllowedUpdateUrl(item.url));
+  const asset = release?.assets.find((item) => /^(?:MRYX[_ ]CNPSF|crtl)_[^/]+_x64-setup\.exe$/i.test(item.name) && isAllowedUpdateUrl(item.url));
   return asset?.url || null;
 }
 

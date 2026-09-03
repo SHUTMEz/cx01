@@ -2,15 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Titlebar from "./components/Titlebar";
 import BottomNav from "./components/BottomNav";
-import { Menu11Icon } from "@hugeicons-pro/core-solid-rounded";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "./components/ThemeProvider";
 import AppBootstrap from "./components/AppBootstrap";
 import RightContext from "./components/RightContext";
 
 export const metadata: Metadata = {
-  title: "crtl",
-  description: "crtl desktop app",
+  title: "MRYX : CNPSF v1.0.5",
+  description: "MRYX : CNPSF desktop app",
 };
 
 export default function RootLayout({
@@ -27,8 +26,8 @@ export default function RootLayout({
         <ThemeProvider />
         <AppBootstrap />
         <Titlebar
-          icon={Menu11Icon}
-          title="CRTL"
+          logoSrc="/mryx-cnpsf.png"
+          title="MRYX : CNPSF v1.0.5"
         />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col items-center w-full lg:pl-16 lg:pr-72">
           <div className="w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 flex flex-col flex-1 pb-28 lg:pb-8">

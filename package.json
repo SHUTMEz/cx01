@@ -1,11 +1,11 @@
 {
-  "name": "crtl",
-  "version": "1.0.4",
+  "name": "mryx-cnpsf",
+  "version": "1.0.5",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:line-worker": "bun build scripts/line-service.mjs --compile --outfile src-tauri/resources/line-service.exe",
+    "build:line-worker": "bun build scripts/line-service.mjs --compile --outfile src-tauri/resources/line-service-v1.0.5.exe",
     "start": "next start",
     "lint": "eslint"
   },

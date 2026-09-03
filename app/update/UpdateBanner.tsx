@@ -16,7 +16,7 @@ export default function UpdateBanner() {
 
   const updateNow = async () => {
     if (!installer || !isAllowedUpdateUrl(installer) || opening) return;
-    if (!window.confirm(`Update CRTL from v${currentVersion} to v${release?.version}?`)) return;
+    if (!window.confirm(`Update MRYX : CNPSF from v${currentVersion} to v${release?.version}?`)) return;
     setOpening(true);
     try {
       await open(installer);

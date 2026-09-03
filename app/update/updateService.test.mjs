@@ -10,15 +10,15 @@ test("compares semantic versions without the v prefix", () => {
 
 test("accepts a published stable GitHub release and selects the NSIS installer", () => {
   const release = parseRelease({
-    tag_name: "v1.0.4",
-    name: "crtl v1.0.4",
+    tag_name: "v1.0.5",
+    name: "MRYX : CNPSF v1.0.5",
     body: "Bug fixes",
     draft: false,
     prerelease: false,
-    assets: [{ name: "crtl_1.0.4_x64-setup.exe", browser_download_url: "https://github.com/SHUTMEz/cx01/releases/download/v1.0.4/crtl_1.0.4_x64-setup.exe" }],
+    assets: [{ name: "MRYX_CNPSF_1.0.5_x64-setup.exe", browser_download_url: "https://github.com/SHUTMEz/cx01/releases/download/v1.0.5/MRYX_CNPSF_1.0.5_x64-setup.exe" }],
   });
-  assert.equal(release?.version, "1.0.4");
-  assert.equal(selectWindowsInstaller(release), "https://github.com/SHUTMEz/cx01/releases/download/v1.0.4/crtl_1.0.4_x64-setup.exe");
+  assert.equal(release?.version, "1.0.5");
+  assert.equal(selectWindowsInstaller(release), "https://github.com/SHUTMEz/cx01/releases/download/v1.0.5/MRYX_CNPSF_1.0.5_x64-setup.exe");
 });
 
 test("rejects prereleases, malformed releases, and unsafe update URLs", () => {
@@ -30,8 +30,8 @@ test("rejects prereleases, malformed releases, and unsafe update URLs", () => {
 });
 
 test("checks GitHub releases and reports an available update", async () => {
-  const fetcher = async () => ({ ok: true, json: async () => [{ tag_name: "v1.0.4", name: "crtl v1.0.4", body: "Fixes", draft: false, prerelease: false, assets: [{ name: "crtl_1.0.4_x64-setup.exe", browser_download_url: "https://github.com/SHUTMEz/cx01/releases/download/v1.0.4/crtl_1.0.4_x64-setup.exe" }] }] });
+  const fetcher = async () => ({ ok: true, json: async () => [{ tag_name: "v1.0.5", name: "MRYX : CNPSF v1.0.5", body: "Fixes", draft: false, prerelease: false, assets: [{ name: "MRYX_CNPSF_1.0.5_x64-setup.exe", browser_download_url: "https://github.com/SHUTMEz/cx01/releases/download/v1.0.5/MRYX_CNPSF_1.0.5_x64-setup.exe" }] }] });
   const result = await checkForUpdate("1.0.3", fetcher);
   assert.equal(result.status, "available");
-  assert.equal(result.release?.version, "1.0.4");
+  assert.equal(result.release?.version, "1.0.5");
 });
