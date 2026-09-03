@@ -1,12 +1,36 @@
-use std::{io::{BufRead, BufReader, Write}, path::PathBuf, process::{Child, ChildStdin, Command, Stdio}, sync::{Mutex, OnceLock}};
+use std::{io::{BufRead, BufReader, Write}, path::{Path, PathBuf}, process::{Child, ChildStdin, Command, Stdio}, sync::{Mutex, OnceLock}};
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
+
+#[cfg(test)]
+mod tests {
+    use super::line_script_candidates;
+    use std::path::Path;
+
+    #[test]
+    fn bundled_line_script_is_checked_before_development_paths() {
+        let candidates = line_script_candidates(Path::new("C:\\app\\resources"), Path::new("C:\\app"));
+        assert_eq!(candidates[0], Path::new("C:\\app\\resources\\line-service.exe"));
+        assert_eq!(candidates[1], Path::new("C:\\app\\resources\\scripts\\line-service.mjs"));
+        assert_eq!(candidates[2], Path::new("C:\\app\\scripts\\line-service.mjs"));
+        assert_eq!(candidates[3], Path::new("C:\\scripts\\line-service.mjs"));
+    }
+}
 
 static LINE_PROCESS: OnceLock<Mutex<Option<(Child, ChildStdin)>>> = OnceLock::new();
 
 fn line_process() -> &'static Mutex<Option<(Child, ChildStdin)>> {
     LINE_PROCESS.get_or_init(|| Mutex::new(None))
+}
+
+fn line_script_candidates(resource_dir: &Path, current_dir: &Path) -> Vec<PathBuf> {
+    vec![
+        resource_dir.join("line-service.exe"),
+        resource_dir.join("scripts").join("line-service.mjs"),
+        current_dir.join("scripts").join("line-service.mjs"),
+        current_dir.parent().unwrap_or(current_dir).join("scripts").join("line-service.mjs"),
+    ]
 }
 
 #[derive(Serialize, Clone)]
@@ -21,13 +45,20 @@ fn start_line_service(app: AppHandle) -> Result<(), String> {
     }
 
     let current_dir = std::env::current_dir().map_err(|error| error.to_string())?;
-    let script = [current_dir.join("scripts").join("line-service.mjs"), current_dir.join("..").join("scripts").join("line-service.mjs")]
+    let resource_dir = app.path().resource_dir().map_err(|error| error.to_string())?;
+    let worker = line_script_candidates(&resource_dir, &current_dir)
         .into_iter()
         .find(|path| path.exists())
         .ok_or_else(|| "LINE worker script was not found".to_string())?;
     let storage = app.path().app_data_dir().map_err(|error| error.to_string())?.join("line").join("account.json");
-    let mut child = Command::new("node")
-        .arg(script)
+    let mut command = if worker.extension().and_then(|extension| extension.to_str()) == Some("exe") {
+        Command::new(worker)
+    } else {
+        let mut command = Command::new("node");
+        command.arg(worker);
+        command
+    };
+    let mut child = command
         .arg("--storage")
         .arg(storage)
         .stdin(Stdio::piped())
