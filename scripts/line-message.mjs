@@ -8,3 +8,9 @@ export function classifyLineMessage(contentType) {
 export function isImageMimeType(mimeType) {
   return typeof mimeType === "string" && mimeType.toLowerCase().startsWith("image/");
 }
+
+// A secondary-device self-bot receives messages sent by the logged-in account
+// with isMyMessage=true. Those events are the primary capture source.
+export function shouldCaptureLineMessage(message) {
+  return Boolean(message);
+}

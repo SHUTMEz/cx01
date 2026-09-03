@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyLineMessage, isImageMimeType } from "./line-message.mjs";
+import { classifyLineMessage, isImageMimeType, shouldCaptureLineMessage } from "./line-message.mjs";
+
+test("captures messages sent by the logged-in LINE account", () => {
+  assert.equal(shouldCaptureLineMessage({ isMyMessage: true }), true);
+  assert.equal(shouldCaptureLineMessage({ isMyMessage: false }), true);
+});
 
 test("classifies LINE text and image content types", () => {
   assert.equal(classifyLineMessage("NONE"), "text");

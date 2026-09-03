@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { FileStorage } from "@jsr/evex__linejs/storage";
 import { loginWithAuthToken, loginWithQR } from "@jsr/evex__linejs";
-import { classifyLineMessage, isImageMimeType } from "./line-message.mjs";
+import { classifyLineMessage, isImageMimeType, shouldCaptureLineMessage } from "./line-message.mjs";
 
 const storagePath = process.argv[process.argv.indexOf("--storage") + 1];
 if (!storagePath) throw new Error("Missing --storage path");
@@ -40,7 +40,7 @@ try {
 
 if (client) {
   client.on("message", async (message) => {
-    if (message.isMyMessage) return;
+    if (!shouldCaptureLineMessage(message)) return;
     const contentType = message.raw.contentType;
     try {
       const messageKind = classifyLineMessage(contentType);
