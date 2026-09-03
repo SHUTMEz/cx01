@@ -14,3 +14,11 @@ export function isImageMimeType(mimeType) {
 export function shouldCaptureLineMessage(message) {
   return Boolean(message);
 }
+
+export async function* pollLineMessages(client, onError = () => {}) {
+  const polling = client.base.createPolling();
+  for await (const event of polling._listenTalkEvents({ pollingInterval: 250, onError })) {
+    if (event.type !== "SEND_MESSAGE" && event.type !== "RECEIVE_MESSAGE") continue;
+    yield await client.base.e2ee.decryptE2EEMessage(event.message);
+  }
+}

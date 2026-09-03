@@ -8,7 +8,7 @@ import AppBootstrap from "./components/AppBootstrap";
 import RightContext from "./components/RightContext";
 
 export const metadata: Metadata = {
-  title: "MRYX : CNPSF v1.0.6",
+  title: "MRYX : CNPSF v1.0.7",
   description: "MRYX : CNPSF desktop app",
 };
 
@@ -27,7 +27,7 @@ export default function RootLayout({
         <AppBootstrap />
         <Titlebar
           logoSrc="/mryx-cnpsf.png"
-          title="MRYX : CNPSF v1.0.6"
+          title="MRYX : CNPSF v1.0.7"
         />
         <main className="flex-1 overflow-y-auto overflow-x-hidden relative flex flex-col items-center w-full lg:pl-16 lg:pr-72">
           <div className="w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 flex flex-col flex-1 pb-28 lg:pb-8">
