@@ -26,7 +26,7 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableImageItem } from "../components/SortableImageItem";
 import { CategorySelect } from "../components/CategorySelect";
-import StartImageSelector from "../components/StartImageSelector";
+import { getDefaultStartImages } from "../components/startImageDrop";
 import TextEditor from "../components/TextEditor";
 
 interface ImageObj {
@@ -58,9 +58,9 @@ function EditCardForm() {
       setCategory(card.category);
       // Edit must reflect this card's saved selection. An empty selection means none,
       // never fall back to selecting every image from Settings.
-      setSelectedStartImages(card.startImages ?? []);
+      setSelectedStartImages(getDefaultStartImages(settings.startPhotos || [], card.startImages));
     }
-  }, [cards, id]);
+  }, [cards, id, settings.startPhotos]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -198,11 +198,6 @@ function EditCardForm() {
             </label>
           </div>
         </DndContext>
-      </section>
-
-      <section id="start-photos" className="flex flex-col gap-3">
-        <div className="flex items-center gap-2"><HugeiconsIcon icon={Image02Icon} size={20} className="text-[var(--muted-foreground)]" /><h2 className="text-sm font-bold text-[var(--foreground)]">Start images from Settings</h2></div>
-        <StartImageSelector images={settings.startPhotos || []} selected={selectedStartImages} onChange={setSelectedStartImages} />
       </section>
 
       <section id="details" className="flex flex-col gap-3 scroll-mt-6">

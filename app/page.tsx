@@ -30,17 +30,7 @@ import { Tooltip } from "./components/Tooltip";
 import { useContextMenu } from "./components/ContextMenu";
 import CustomSelect from "./components/CustomSelect";
 import StoredImage from "./components/StoredImage";
-
-function getDragImagePaths(images: string[], exportedPath?: string): string[] {
-  const storedPaths = images.filter((src) => !src.startsWith("data:"));
-  if (storedPaths.length === images.length) return storedPaths;
-  if (!exportedPath) return storedPaths;
-  return images.map((src, index) => {
-    const match = src.match(/data:image\/([a-zA-Z]+);/);
-    const ext = match ? match[1] : "jpeg";
-    return `${exportedPath}\\${index + 1}.${ext}`;
-  });
-}
+import { getCardImagePaths, getCardImagesForDrag, getCardTextWithoutEndText } from "./cardContextActions";
 
 export default function HomePage() {
   const router = useRouter();
@@ -78,6 +68,33 @@ export default function HomePage() {
     }
   };
 
+  const handleCopyWithoutEndText = async (id: string) => {
+    const card = cards.find((item) => item.id === id);
+    if (!card) return;
+    try {
+      await navigator.clipboard.writeText(getCardTextWithoutEndText(card.text));
+      toast.success("Card text copied!");
+    } catch {
+      toast.error("Failed to copy text.");
+    }
+  };
+
+  const handleDragWithoutStartPhoto = async (id: string) => {
+    const card = cards.find((item) => item.id === id);
+    if (!card) return;
+    try {
+      const imagePaths = getCardImagePaths(card.images, card.exportedPath);
+      if (!imagePaths.length) {
+        toast.error("No card images to drag");
+        return;
+      }
+      await invoke("start_drag", { paths: imagePaths });
+    } catch (error) {
+      console.error("Native drag failed", error);
+      toast.error("Could not drag images");
+    }
+  };
+
   const confirmDelete = async () => {
     if (deleteId) {
       try {
@@ -106,6 +123,8 @@ export default function HomePage() {
     onRefresh: () => window.location.reload(),
     onEditCard: (id) => router.push(`/edit?id=${id}`),
     onDeleteCard: (id) => setDeleteId(id),
+    onDragWithoutStartPhoto: handleDragWithoutStartPhoto,
+    onCopyWithoutEndText: handleCopyWithoutEndText,
   });
 
   const filteredCards = cards.filter(c => {
@@ -217,7 +236,8 @@ export default function HomePage() {
         <div className="card-grid">
           <AnimatePresence>
             {visibleCards.map((card) => {
-              const fullImages = card.images;
+              const displayImages = card.images;
+              const dragImages = getCardImagesForDrag(card.startImages, card.images);
               const dateObj = new Date(card.createdAt);
               const dateStr = dateObj.toLocaleDateString("en-GB", { day: '2-digit', month: 'short', year: 'numeric' });
               const timeStr = dateObj.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' });
@@ -233,18 +253,18 @@ export default function HomePage() {
                               className="bg-[var(--card)] rounded-[var(--radius-xl)] overflow-hidden shadow-sm border border-[var(--border)] flex flex-col transition-shadow duration-200 hover:shadow-md"
                             >
                               <div className="relative aspect-video bg-[var(--input)] flex items-center justify-center overflow-hidden">
-                                {fullImages.length > 0 ? (
+                                {displayImages.length > 0 ? (
                     <StoredImage 
-                      src={fullImages[0]} 
+                      src={displayImages[0]}
                       alt="Preview" 
                       className="w-full h-full object-cover"
                     />
                                 ) : (
                                   <HugeiconsIcon icon={Image02Icon} size={24} className="text-[var(--muted-foreground)]" />
                                 )}
-                                {fullImages.length > 1 && (
+                                {displayImages.length > 1 && (
                                   <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full text-[10px] font-bold text-white shadow-sm pointer-events-none">
-                                    +{fullImages.length - 1}
+                                    +{displayImages.length - 1}
                                   </div>
                                 )}
                                 {card.category && (
@@ -316,7 +336,7 @@ export default function HomePage() {
                         </button>
                       </Tooltip>
 
-                      {!fullImages.length ? (
+                      {!dragImages.length ? (
                       <div className="flex items-center gap-1">
                         <Tooltip content="Copy">
                           <button
@@ -336,7 +356,7 @@ export default function HomePage() {
                             onDragStart={async (e) => {
                               e.preventDefault();
                               try {
-                                const imagePaths = getDragImagePaths(fullImages, card.exportedPath);
+                                const imagePaths = getCardImagePaths(dragImages, card.exportedPath);
                                 if (!imagePaths.length) return;
                                 await invoke("start_drag", { paths: imagePaths });
                               } catch (err) {
@@ -383,7 +403,8 @@ export default function HomePage() {
             <tbody>
               <AnimatePresence>
                 {visibleCards.map((card, index) => {
-                  const fullImages = card.images;
+                          const displayImages = card.images;
+                          const dragImages = getCardImagesForDrag(card.startImages, card.images);
                   const dateObj = new Date(card.createdAt);
                   const dateStr = dateObj.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
                   const timeStr = dateObj.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -397,8 +418,8 @@ export default function HomePage() {
                     >
                       <td className="px-4 py-3 text-[var(--muted-foreground)] font-mono">{index + 1}</td>
                       <td className="px-4 py-3">
-                        {fullImages.length > 0 ? (
-                          <StoredImage src={fullImages[0]} alt="" className="w-10 h-10 object-cover rounded-[var(--radius-md)]" />
+                        {displayImages.length > 0 ? (
+                          <StoredImage src={displayImages[0]} alt="" className="w-10 h-10 object-cover rounded-[var(--radius-md)]" />
                         ) : (
                           <div className="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--input)] flex items-center justify-center">
                             <HugeiconsIcon icon={Image02Icon} size={16} className="text-[var(--muted-foreground)]" />
@@ -445,7 +466,7 @@ export default function HomePage() {
                             </button>
                           </Tooltip>
 
-                          {!fullImages.length ? (
+                          {!dragImages.length ? (
                             <>
                               <Tooltip content="Copy">
                                 <button onClick={() => handleCopyText(card)} className="p-1.5 rounded-[var(--radius-md)] hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
@@ -461,7 +482,7 @@ export default function HomePage() {
                                   onDragStart={async (e) => {
                                     e.preventDefault();
                                     try {
-                                      const imagePaths = getDragImagePaths(fullImages, card.exportedPath);
+                                      const imagePaths = getCardImagePaths(dragImages, card.exportedPath);
                                       if (!imagePaths.length) return;
                                       await invoke("start_drag", { paths: imagePaths });
                                     } catch (err) {

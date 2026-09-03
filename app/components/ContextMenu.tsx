@@ -7,14 +7,17 @@ import {
   Edit01Icon,
   Delete01Icon,
   Add01Icon,
+  Image02Icon,
   RefreshIcon,
+  TextSquareIcon,
 } from "@hugeicons-pro/core-solid-rounded";
 
 interface ContextMenuItem {
   label: string;
   icon: any;
-  onClick: () => void;
+  onClick: () => void | Promise<void>;
   danger?: boolean;
+  startOnPointerDown?: boolean;
 }
 
 interface ContextMenuProps {
@@ -26,6 +29,19 @@ interface ContextMenuProps {
 
 function ContextMenuPopup({ items, x, y, onClose }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const pointerStartedItem = useRef<number | null>(null);
+  const [busyIndex, setBusyIndex] = useState<number | null>(null);
+
+  const runAction = async (item: ContextMenuItem, index: number) => {
+    if (busyIndex !== null) return;
+    setBusyIndex(index);
+    try {
+      await item.onClick();
+      onClose();
+    } finally {
+      setBusyIndex(null);
+    }
+  };
 
   useEffect(() => {
     const handleDown = (e: MouseEvent) => {
@@ -67,7 +83,18 @@ function ContextMenuPopup({ items, x, y, onClose }: ContextMenuProps) {
       {items.map((item, i) => (
         <button
           key={i}
-          onClick={() => { item.onClick(); onClose(); }}
+          disabled={busyIndex !== null}
+          onPointerDown={item.startOnPointerDown ? () => {
+            pointerStartedItem.current = i;
+            void runAction(item, i);
+          } : undefined}
+          onClick={() => {
+            if (pointerStartedItem.current === i) {
+              pointerStartedItem.current = null;
+              return;
+            }
+            void runAction(item, i);
+          }}
           className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-xs font-medium transition-colors
             ${item.danger
               ? "text-[var(--danger)] hover:bg-[var(--danger)]/10"
@@ -75,7 +102,7 @@ function ContextMenuPopup({ items, x, y, onClose }: ContextMenuProps) {
             }`}
         >
           <HugeiconsIcon icon={item.icon} size={15} className="shrink-0 opacity-70" />
-          {item.label}
+          {busyIndex === i ? "Starting…" : item.label}
         </button>
       ))}
     </motion.div>
@@ -87,9 +114,11 @@ interface UseContextMenuOptions {
   onRefresh: () => void;
   onEditCard: (id: string) => void;
   onDeleteCard: (id: string) => void;
+  onDragWithoutStartPhoto: (id: string) => void | Promise<void>;
+  onCopyWithoutEndText: (id: string) => void | Promise<void>;
 }
 
-export function useContextMenu({ onAddCard, onRefresh, onEditCard, onDeleteCard }: UseContextMenuOptions) {
+export function useContextMenu({ onAddCard, onRefresh, onEditCard, onDeleteCard, onDragWithoutStartPhoto, onCopyWithoutEndText }: UseContextMenuOptions) {
   const [menu, setMenu] = useState<{ x: number; y: number; cardId: string | null } | null>(null);
 
   useEffect(() => {
@@ -117,6 +146,8 @@ export function useContextMenu({ onAddCard, onRefresh, onEditCard, onDeleteCard 
   const menuItems: ContextMenuItem[] = menu?.cardId
     ? [
         { label: "Edit Card", icon: Edit01Icon, onClick: () => onEditCard(menu.cardId!) },
+        { label: "Drag images", icon: Image02Icon, onClick: () => onDragWithoutStartPhoto(menu.cardId!), startOnPointerDown: true },
+        { label: "Copy text", icon: TextSquareIcon, onClick: () => onCopyWithoutEndText(menu.cardId!) },
         { label: "Delete Card", icon: Delete01Icon, onClick: () => onDeleteCard(menu.cardId!), danger: true },
         { label: "Refresh", icon: RefreshIcon, onClick: onRefresh },
       ]

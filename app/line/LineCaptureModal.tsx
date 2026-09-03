@@ -7,11 +7,12 @@ import { Cancel01Icon, Copy01Icon, Tick02Icon } from "@hugeicons-pro/core-solid-
 import { toast } from "sonner";
 import { useStore } from "../store/useStore";
 import { saveCardImages } from "../utils/imageStorage";
+import { splitLineCardImagePaths } from "./lineCardImages";
 
 const categories = ["🦐", "🦞", "🦑", "🐙", "🐚", "🦪", "🦀", "🐟", "🪼", "⭐", "🍱"];
 
 export default function LineCaptureModal() {
-  const { lineCapture, clearLineCapture, addCard, copyLineImage } = useStore();
+  const { lineCapture, clearLineCapture, addCard, copyLineImage, settings } = useStore();
   const [draftText, setDraftText] = useState<string | undefined>();
   const [category, setCategory] = useState("⭐");
   const close = () => { setDraftText(undefined); clearLineCapture(); };
@@ -22,8 +23,10 @@ export default function LineCaptureModal() {
     if (!lineCapture.images.length || !text.trim()) return;
     const id = uuidv4();
     try {
-      const paths = await saveCardImages(id, lineCapture.images);
-      await addCard({ id, images: paths, text: text.trim(), category, createdAt: Date.now() });
+      const configuredStartImages = settings.startPhotos || [];
+      const savedPaths = await saveCardImages(id, [...configuredStartImages, ...lineCapture.images]);
+      const { startImages, images } = splitLineCardImagePaths(configuredStartImages, savedPaths);
+      await addCard({ id, images, startImages, text: text.trim(), category, createdAt: Date.now() });
       close();
       toast.success("Card saved");
     } catch (error) {

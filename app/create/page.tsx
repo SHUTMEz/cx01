@@ -27,7 +27,6 @@ import {
 } from "@dnd-kit/sortable";
 import { SortableImageItem } from "../components/SortableImageItem";
 import { CategorySelect } from "../components/CategorySelect";
-import StartImageSelector from "../components/StartImageSelector";
 import TextEditor from "../components/TextEditor";
 import { saveCardImages } from "../utils/imageStorage";
 
@@ -218,11 +217,6 @@ export default function CreateCardPage() {
             </label>
           </div>
         </DndContext>
-      </section>
-
-      <section id="start-photos" className="flex flex-col gap-3">
-        <div className="flex items-center gap-2"><HugeiconsIcon icon={Image02Icon} size={20} className="text-[var(--muted-foreground)]" /><h2 className="text-sm font-bold text-[var(--foreground)]">Start images from Settings</h2></div>
-        <StartImageSelector images={settings.startPhotos || []} selected={selectedStartImages} onChange={setSelectedStartImages} />
       </section>
 
       <section id="details" className="flex flex-col gap-3 scroll-mt-6">
