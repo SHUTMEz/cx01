@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "MRYX CNPSF",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "identifier": "com.crtl.desktop",
   "build": {
     "frontendDist": "../out",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "MRYX : CNPSF v1.0.7",
+        "title": "MRYX : CNPSF v1.0.8",
         "width": 800,
         "height": 600,
         "resizable": true,
@@ -29,7 +29,7 @@
   "bundle": {
     "active": true,
     "resources": {
-      "resources/line-service-v1.0.7.exe": "line-service-v1.0.7.exe"
+      "resources/line-service-v1.0.8.exe": "line-service-v1.0.8.exe"
     },
     "targets": "all",
     "icon": [
