@@ -60,6 +60,14 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    const handleContextAction = (event: Event) => {
+      if ((event as CustomEvent<string>).detail === "cards:view-table") setViewMode("table");
+    };
+    window.addEventListener("crtl:context-action", handleContextAction);
+    return () => window.removeEventListener("crtl:context-action", handleContextAction);
+  });
+
   const handleCopyText = async (card: Card) => {
     const fullText = settings.useEndText && settings.endText ? `${card.text}\n\n${settings.endText}` : card.text;
     try {
@@ -206,7 +214,7 @@ export default function HomePage() {
           <p className="text-sm font-medium text-[var(--muted-foreground)]">No cards yet. Create one!</p>
         </motion.div>
       ) : viewMode === "card" ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6">
+        <div className="card-grid">
           <AnimatePresence>
             {visibleCards.map((card) => {
               const fullImages = card.images;

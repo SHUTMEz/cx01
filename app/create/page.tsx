@@ -173,7 +173,7 @@ export default function CreateCardPage() {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.2 }}
-      className="flex flex-col gap-6"
+      className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-4"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -183,6 +183,7 @@ export default function CreateCardPage() {
       </div>
 
       <section
+        id="photos"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -219,12 +220,12 @@ export default function CreateCardPage() {
         </DndContext>
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="start-photos" className="flex flex-col gap-3">
         <div className="flex items-center gap-2"><HugeiconsIcon icon={Image02Icon} size={20} className="text-[var(--muted-foreground)]" /><h2 className="text-sm font-bold text-[var(--foreground)]">Start images from Settings</h2></div>
         <StartImageSelector images={settings.startPhotos || []} selected={selectedStartImages} onChange={setSelectedStartImages} />
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="details" className="flex flex-col gap-3 scroll-mt-6">
         <div className="flex items-center gap-2">
           <HugeiconsIcon icon={Note01Icon} size={20} className="text-[var(--muted-foreground)]" />
           <h2 className="text-sm font-bold text-[var(--foreground)]">Details</h2>
@@ -242,7 +243,7 @@ export default function CreateCardPage() {
         />
       </section>
 
-      <section className="flex flex-col gap-3">
+      <section id="category" className="flex flex-col gap-3 scroll-mt-6">
         <div className="flex items-center gap-2">
           <HugeiconsIcon icon={Folder01Icon} size={20} className="text-[var(--muted-foreground)]" />
           <h2 className="text-sm font-bold text-[var(--foreground)]">Category</h2>
@@ -250,7 +251,7 @@ export default function CreateCardPage() {
         <CategorySelect value={category} onChange={setCategory} />
       </section>
 
-      <div className="sticky bottom-0 pt-4 pb-2 z-40 bg-[var(--background)] flex justify-end gap-3">
+      <div className="sticky bottom-20 pt-4 pb-2 z-40 bg-[var(--background)] flex justify-end gap-3 lg:bottom-0">
         <div className="absolute inset-0 -top-8 bg-gradient-to-t from-[var(--background)] to-transparent pointer-events-none" />
         <button
           onClick={handleSave}

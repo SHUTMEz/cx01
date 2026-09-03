@@ -1,5 +1,7 @@
 import { create } from "zustand";
 import { Card, Settings } from "../types";
+import { initialCaptureState, lineCaptureReducer, LineCaptureState } from "../line/captureState";
+import { LineServiceStatus } from "../line/serviceState";
 import {
   clearCards,
   defaultSettings,
@@ -19,6 +21,8 @@ interface AppState {
   cards: Card[];
   settings: Settings;
   ready: boolean;
+  lineService: { accountId: string | null; accountName: string | null; status: LineServiceStatus; message: string };
+  lineCapture: LineCaptureState;
   initialize: () => Promise<void>;
   addCard: (card: Card) => Promise<void>;
   updateCard: (id: string, card: Partial<Card>) => Promise<void>;
@@ -27,12 +31,19 @@ interface AppState {
   clearAllCards: () => Promise<void>;
   moveCardToBottom: (id: string, direction?: "asc" | "desc") => Promise<void>;
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
+  updateLineService: (value: Partial<AppState["lineService"]>) => void;
+  receiveLineImage: (dataUrl: string) => void;
+  receiveLineText: (text: string) => void;
+  copyLineImage: (index: number) => void;
+  clearLineCapture: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
   cards: [],
   settings: defaultSettings,
   ready: false,
+  lineService: { accountId: null, accountName: null, status: "disconnected", message: "Connect a LINE account to start" },
+  lineCapture: initialCaptureState,
   initialize: async () => {
     if (get().ready) return;
     await initializeDatabase();
@@ -85,4 +96,9 @@ export const useStore = create<AppState>((set, get) => ({
     });
     await write;
   },
+  updateLineService: (value) => set((state) => ({ lineService: { ...state.lineService, ...value } })),
+  receiveLineImage: (dataUrl) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "image", dataUrl }) })),
+  receiveLineText: (text) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "text", text }) })),
+  copyLineImage: (index) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "copy-image", index }) })),
+  clearLineCapture: () => set({ lineCapture: initialCaptureState }),
 }));

@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Delete01Icon, DragDropIcon } from "@hugeicons-pro/core-solid-rounded";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import StoredImage from "./StoredImage";
 
 interface SortableImageItemProps {
   id: string;
@@ -36,7 +37,7 @@ export function SortableImageItem({ id, src, onRemove }: SortableImageItemProps)
       className={`relative aspect-square rounded-[var(--radius-md)] overflow-hidden group border border-[var(--border)] bg-[var(--input)]
         ${isDragging ? "shadow-lg ring-2 ring-[var(--primary)] scale-105" : ""}`}
     >
-      <img src={src} alt="Uploaded" className="w-full h-full object-cover pointer-events-none" />
+      <StoredImage src={src} alt="Uploaded" className="w-full h-full object-cover pointer-events-none" />
       
       <div
         {...attributes}

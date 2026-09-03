@@ -85,6 +85,16 @@ body {
   color: var(--foreground);
 }
 
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .card-grid { gap: 1.25rem; }
+}
+
 /* Premium Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 14px; /* Width of the track, needs to be wider to accommodate borders */

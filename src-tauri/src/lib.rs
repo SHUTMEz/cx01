@@ -1,4 +1,83 @@
-use std::path::PathBuf;
+use std::{io::{BufRead, BufReader, Write}, path::PathBuf, process::{Child, ChildStdin, Command, Stdio}, sync::{Mutex, OnceLock}};
+
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager};
+
+static LINE_PROCESS: OnceLock<Mutex<Option<(Child, ChildStdin)>>> = OnceLock::new();
+
+fn line_process() -> &'static Mutex<Option<(Child, ChildStdin)>> {
+    LINE_PROCESS.get_or_init(|| Mutex::new(None))
+}
+
+#[derive(Serialize, Clone)]
+struct LineServiceEvent { event_type: String, payload: serde_json::Value }
+
+#[tauri::command]
+fn start_line_service(app: AppHandle) -> Result<(), String> {
+    let mut process = line_process().lock().map_err(|error| error.to_string())?;
+    if let Some((child, _)) = process.as_mut() {
+        if child.try_wait().map_err(|error| error.to_string())?.is_none() { return Ok(()); }
+        *process = None;
+    }
+
+    let current_dir = std::env::current_dir().map_err(|error| error.to_string())?;
+    let script = [current_dir.join("scripts").join("line-service.mjs"), current_dir.join("..").join("scripts").join("line-service.mjs")]
+        .into_iter()
+        .find(|path| path.exists())
+        .ok_or_else(|| "LINE worker script was not found".to_string())?;
+    let storage = app.path().app_data_dir().map_err(|error| error.to_string())?.join("line").join("account.json");
+    let mut child = Command::new("node")
+        .arg(script)
+        .arg("--storage")
+        .arg(storage)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("Unable to start LINE service: {error}"))?;
+    let stdin = child.stdin.take().ok_or_else(|| "LINE service stdin unavailable".to_string())?;
+    let stdout = child.stdout.take().ok_or_else(|| "LINE service stdout unavailable".to_string())?;
+    let stderr = child.stderr.take().ok_or_else(|| "LINE service stderr unavailable".to_string())?;
+    let app_handle = app.clone();
+    let error_handle = app.clone();
+    std::thread::spawn(move || {
+        for line in BufReader::new(stdout).lines().flatten() {
+            if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
+                let event_type = value.get("type").and_then(|item| item.as_str()).unwrap_or("unknown").to_string();
+                let payload = value.as_object().map(|object| object.iter().filter(|(key, _)| key.as_str() != "type").map(|(key, value)| (key.clone(), value.clone())).collect::<serde_json::Map<String, serde_json::Value>>()).map(serde_json::Value::Object).unwrap_or(serde_json::Value::Null);
+                let _ = app_handle.emit("line-service-event", LineServiceEvent { event_type, payload });
+            }
+        }
+        let _ = app_handle.emit("line-service-event", LineServiceEvent { event_type: "stopped".to_string(), payload: serde_json::json!({}) });
+    });
+    std::thread::spawn(move || {
+        for line in BufReader::new(stderr).lines().flatten() {
+            let _ = error_handle.emit("line-service-event", LineServiceEvent { event_type: "log".to_string(), payload: serde_json::json!({ "message": line }) });
+        }
+    });
+    *process = Some((child, stdin));
+    Ok(())
+}
+
+#[tauri::command]
+fn stop_line_service() -> Result<(), String> {
+    let mut process = line_process().lock().map_err(|error| error.to_string())?;
+    if let Some((mut child, mut stdin)) = process.take() {
+        stdin.write_all(b"stop\n").map_err(|error| error.to_string())?;
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn start_line_listener() -> Result<(), String> {
+    let mut process = line_process().lock().map_err(|error| error.to_string())?;
+    if let Some((_, stdin)) = process.as_mut() {
+        stdin.write_all(b"start\n").map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
 
 #[tauri::command]
 fn start_drag(window: tauri::WebviewWindow, paths: Vec<String>) -> Result<(), String> {
@@ -42,7 +121,7 @@ pub fn run() {
     .plugin(tauri_plugin_shell::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_sql::Builder::default().build())
-    .invoke_handler(tauri::generate_handler![start_drag, open_folder, delete_folder])
+    .invoke_handler(tauri::generate_handler![start_drag, open_folder, delete_folder, start_line_service, start_line_listener, stop_line_service])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(
