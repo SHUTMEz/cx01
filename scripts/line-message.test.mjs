@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyLineMessage } from "./line-message.mjs";
+import { classifyLineMessage, isImageMimeType } from "./line-message.mjs";
 
 test("classifies LINE text and image content types", () => {
   assert.equal(classifyLineMessage("NONE"), "text");
@@ -12,4 +12,11 @@ test("classifies LINE text and image content types", () => {
   assert.equal(classifyLineMessage("1"), "image");
   assert.equal(classifyLineMessage(21), "image");
   assert.equal(classifyLineMessage("EXTIMAGE"), "image");
+});
+
+test("recognizes image MIME types for unknown LINE content types", () => {
+  assert.equal(isImageMimeType("image/jpeg"), true);
+  assert.equal(isImageMimeType("IMAGE/PNG"), true);
+  assert.equal(isImageMimeType("text/plain"), false);
+  assert.equal(isImageMimeType(undefined), false);
 });

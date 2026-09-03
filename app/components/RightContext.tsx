@@ -65,6 +65,7 @@ const pageCopy: Record<string, { title: string; description: string; actions: Co
       { label: "Back to cards", href: "/", tone: "primary" },
       { label: "Create a card", href: "/create" },
       { label: "LINE service", href: "/line" },
+      { label: "Check for updates", event: "update:check" },
     ],
   },
 };

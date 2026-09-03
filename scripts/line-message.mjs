@@ -4,3 +4,7 @@ export function classifyLineMessage(contentType) {
   if (contentType === 1 || contentType === 21 || normalized === "1" || normalized === "IMAGE" || normalized === "EXTIMAGE") return "image";
   return null;
 }
+
+export function isImageMimeType(mimeType) {
+  return typeof mimeType === "string" && mimeType.toLowerCase().startsWith("image/");
+}

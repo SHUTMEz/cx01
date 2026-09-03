@@ -9,6 +9,7 @@ import { Settings01Icon, Image01Icon, Txt01Icon, Folder01Icon, Delete02Icon, Add
 import { open } from "@tauri-apps/plugin-dialog";
 import { deleteCardImages, deleteExportedFolder } from "../utils/imageStorage";
 import { toast } from "sonner";
+import UpdateBanner from "../update/UpdateBanner";
 
 export default function SettingsPage() {
   const { cards, settings, updateSettings, deleteCards } = useStore();
@@ -67,6 +68,8 @@ export default function SettingsPage() {
         <HugeiconsIcon icon={Settings01Icon} size={24} className="text-[var(--foreground)]" />
         <h1 className="text-xl font-bold text-[var(--foreground)]">Settings</h1>
       </div>
+
+      <UpdateBanner />
 
       <div className="flex flex-col bg-[var(--card)] rounded-[var(--radius-xl)] border border-[var(--border)] shadow-sm overflow-hidden">
         
