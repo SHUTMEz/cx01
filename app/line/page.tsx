@@ -73,7 +73,7 @@ export default function LineServicePage() {
   const handleStart = () => {
     const next = lineServiceReducer(state, { type: "start" });
     if (next.status !== "running") { toast.error(next.message); return; }
-    void invoke("start_line_listener").then(() => { dispatch({ type: "start" }); updateLineService({ status: "running", message: "Waiting for incoming data" }); toast.success("LINE Service started"); }).catch((error) => toast.error(error instanceof Error ? error.message : String(error)));
+    void invoke("start_line_listener").then(() => { toast.success("LINE Service started"); }).catch((error) => toast.error(error instanceof Error ? error.message : String(error)));
   };
 
   const handleStop = () => {

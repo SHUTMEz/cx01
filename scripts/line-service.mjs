@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { FileStorage } from "@jsr/evex__linejs/storage";
 import { loginWithAuthToken, loginWithQR } from "@jsr/evex__linejs";
+import { classifyLineMessage } from "./line-message.mjs";
 
 const storagePath = process.argv[process.argv.indexOf("--storage") + 1];
 if (!storagePath) throw new Error("Missing --storage path");
@@ -42,11 +43,20 @@ if (client) {
     if (message.isMyMessage) return;
     const contentType = message.raw.contentType;
     try {
-      if (contentType === 1 || contentType === "IMAGE") {
+      const messageKind = classifyLineMessage(contentType);
+      if (messageKind === "image") {
         const data = await message.getData();
         emit("image", { messageId: message.raw.id, chatId: message.to, mimeType: data.type, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
-      } else if (contentType === 0 || contentType === "NONE") {
+      } else if (messageKind === "text") {
         emit("text", { messageId: message.raw.id, chatId: message.to, text: message.text });
+      } else {
+        // Some LINE events have a missing/extended content type after E2EE
+        // decoding. Keep the capture flow useful for ordinary text messages.
+        if (typeof message.text === "string" && message.text.trim()) {
+          emit("text", { messageId: message.raw.id, chatId: message.to, text: message.text });
+        } else {
+          emit("log", { message: `Ignored unsupported LINE message type: ${String(contentType)}` });
+        }
       }
     } catch (error) { emit("error", { message: error instanceof Error ? error.message : String(error) }); }
   });

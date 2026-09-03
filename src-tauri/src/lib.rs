@@ -106,6 +106,9 @@ fn start_line_listener() -> Result<(), String> {
     let mut process = line_process().lock().map_err(|error| error.to_string())?;
     if let Some((_, stdin)) = process.as_mut() {
         stdin.write_all(b"start\n").map_err(|error| error.to_string())?;
+        stdin.flush().map_err(|error| error.to_string())?;
+    } else {
+        return Err("LINE service is not running".to_string());
     }
     Ok(())
 }
