@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "crtl",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "identifier": "com.crtl.desktop",
   "build": {
     "frontendDist": "../out",
@@ -29,7 +29,7 @@
   "bundle": {
     "active": true,
     "resources": {
-      "resources/line-service.exe": "line-service.exe"
+    "resources/line-service-v1.0.3.exe": "line-service-v1.0.3.exe"
     },
     "targets": "all",
     "icon": [

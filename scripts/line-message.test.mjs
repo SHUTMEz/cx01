@@ -10,4 +10,6 @@ test("classifies LINE text and image content types", () => {
   assert.equal(classifyLineMessage("IMAGE"), "image");
   assert.equal(classifyLineMessage(1), "image");
   assert.equal(classifyLineMessage("1"), "image");
+  assert.equal(classifyLineMessage(21), "image");
+  assert.equal(classifyLineMessage("EXTIMAGE"), "image");
 });

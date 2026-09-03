@@ -11,10 +11,11 @@ mod tests {
     #[test]
     fn bundled_line_script_is_checked_before_development_paths() {
         let candidates = line_script_candidates(Path::new("C:\\app\\resources"), Path::new("C:\\app"));
-        assert_eq!(candidates[0], Path::new("C:\\app\\resources\\line-service.exe"));
-        assert_eq!(candidates[1], Path::new("C:\\app\\resources\\scripts\\line-service.mjs"));
-        assert_eq!(candidates[2], Path::new("C:\\app\\scripts\\line-service.mjs"));
-        assert_eq!(candidates[3], Path::new("C:\\scripts\\line-service.mjs"));
+        assert_eq!(candidates[0], Path::new("C:\\app\\resources\\line-service-v1.0.3.exe"));
+        assert_eq!(candidates[1], Path::new("C:\\app\\resources\\line-service.exe"));
+        assert_eq!(candidates[2], Path::new("C:\\app\\resources\\scripts\\line-service.mjs"));
+        assert_eq!(candidates[3], Path::new("C:\\app\\scripts\\line-service.mjs"));
+        assert_eq!(candidates[4], Path::new("C:\\scripts\\line-service.mjs"));
     }
 }
 
@@ -26,6 +27,7 @@ fn line_process() -> &'static Mutex<Option<(Child, ChildStdin)>> {
 
 fn line_script_candidates(resource_dir: &Path, current_dir: &Path) -> Vec<PathBuf> {
     vec![
+        resource_dir.join("line-service-v1.0.3.exe"),
         resource_dir.join("line-service.exe"),
         resource_dir.join("scripts").join("line-service.mjs"),
         current_dir.join("scripts").join("line-service.mjs"),

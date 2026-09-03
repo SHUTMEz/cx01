@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import { useStore } from "../store/useStore";
 import LineCaptureModal from "../line/LineCaptureModal";
 
@@ -21,7 +22,11 @@ export default function AppBootstrap() {
       if (eventType === "status" && payload.status === "running") updateLineService({ status: "running", message: "Waiting for incoming data" });
       if (eventType === "status" && payload.status === "ready") updateLineService({ status: "ready", message: "Ready to start" });
       if (eventType === "stopped") updateLineService({ status: "stopped", message: "Service is stopped" });
-      if (eventType === "error") updateLineService({ status: "stopped", message: payload.message || "LINE service error" });
+      if (eventType === "error") {
+        const message = payload.message || "LINE service error";
+        updateLineService({ status: "stopped", message });
+        toast.error(message);
+      }
       if (eventType === "image") receiveLineImage(`data:${payload.mimeType};base64,${payload.data}`);
       if (eventType === "text") receiveLineText(payload.text);
     });

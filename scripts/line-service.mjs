@@ -46,7 +46,8 @@ if (client) {
       const messageKind = classifyLineMessage(contentType);
       if (messageKind === "image") {
         const data = await message.getData();
-        emit("image", { messageId: message.raw.id, chatId: message.to, mimeType: data.type, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+        const mimeType = typeof data.type === "string" && data.type.startsWith("image/") ? data.type : "image/jpeg";
+        emit("image", { messageId: message.raw.id, chatId: message.to, mimeType, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
       } else if (messageKind === "text") {
         emit("text", { messageId: message.raw.id, chatId: message.to, text: message.text });
       } else {
