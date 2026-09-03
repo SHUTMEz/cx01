@@ -1,4 +1,4 @@
-export type LineServiceStatus = "disconnected" | "connecting" | "ready" | "running" | "stopped";
+export type LineServiceStatus = "disconnected" | "connecting" | "reconnecting" | "ready" | "running" | "stopped";
 
 export interface LineServiceState {
   accountId: string | null;
@@ -9,6 +9,7 @@ export interface LineServiceState {
 
 export type LineServiceAction =
   | { type: "connecting" }
+  | { type: "reconnecting"; message?: string }
   | { type: "connect"; accountId: string; accountName: string }
   | { type: "disconnect" }
   | { type: "start" }
@@ -25,6 +26,8 @@ export function lineServiceReducer(state: LineServiceState, action: LineServiceA
   switch (action.type) {
     case "connecting":
       return { ...state, status: "connecting", message: "Waiting for LINE login" };
+    case "reconnecting":
+      return { ...state, status: "reconnecting", message: action.message || "Reconnecting to LINE" };
     case "connect":
       return { accountId: action.accountId, accountName: action.accountName, status: "ready", message: "Ready to start" };
     case "disconnect":

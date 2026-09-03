@@ -21,13 +21,11 @@ export function useUpdateCheck() {
   useEffect(() => {
     void check();
     const listener = (event: Event) => {
-      if (event.type === "crtl:check-for-updates" || (event as CustomEvent<string>).detail === "update:check") void check();
+      if (event.type === "crtl:check-for-updates") void check();
     };
     window.addEventListener("crtl:check-for-updates", listener);
-    window.addEventListener("crtl:context-action", listener);
     return () => {
       window.removeEventListener("crtl:check-for-updates", listener);
-      window.removeEventListener("crtl:context-action", listener);
     };
   }, [check]);
 

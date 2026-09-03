@@ -14,6 +14,7 @@ import { useStore } from "../store/useStore";
 const statusLabels = {
   disconnected: "Disconnected",
   connecting: "Connecting",
+  reconnecting: "Reconnecting",
   ready: "Ready",
   running: "Running",
   stopped: "Stopped",
@@ -23,38 +24,43 @@ export default function LineServicePage() {
   const [state, dispatch] = useReducer(lineServiceReducer, initialLineServiceState);
   const persistedService = useStore((store) => store.lineService);
   const updateLineService = useStore((store) => store.updateLineService);
+  const clearLineCaptureQueue = useStore((store) => store.clearLineCaptureQueue);
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrImage, setQrImage] = useState<string | null>(null);
   const [pincode, setPincode] = useState<string | null>(null);
   const isRunning = state.status === "running";
+  const isListening = isRunning || state.status === "reconnecting";
 
   useEffect(() => {
     if (persistedService.accountId) dispatch({ type: "connect", accountId: persistedService.accountId, accountName: persistedService.accountName || "LINE account" });
     if (persistedService.status === "running") dispatch({ type: "start" });
+    if (persistedService.status === "reconnecting") dispatch({ type: "reconnecting", message: persistedService.message });
     if (persistedService.status === "stopped") dispatch({ type: "stop" });
-  }, [persistedService.accountId, persistedService.accountName, persistedService.status]);
+  }, [persistedService.accountId, persistedService.accountName, persistedService.message, persistedService.status]);
 
   useEffect(() => {
     let active = true;
-    const unlisten = listen<{ event_type: string; payload: Record<string, string> }>("line-service-event", (event) => {
+    const unlisten = listen<{ event_type: string; payload: Record<string, string | number> }>("line-service-event", (event) => {
       if (!active) return;
       const { event_type: eventType, payload } = event.payload;
       if (eventType === "qr") {
-        setQrUrl(payload.url);
+        const url = String(payload.url);
+        setQrUrl(url);
         setPincode(null);
-        void QRCode.toDataURL(payload.url, { width: 220, margin: 2 }).then(setQrImage).catch(() => setQrImage(null));
+        void QRCode.toDataURL(url, { width: 220, margin: 2 }).then(setQrImage).catch(() => setQrImage(null));
       }
-      if (eventType === "pincode") setPincode(payload.pincode);
+      if (eventType === "pincode") setPincode(String(payload.pincode));
       if (eventType === "image") toast.success("Received image from LINE");
       if (eventType === "text") toast.success("Received text from LINE");
       if (eventType === "connected") {
         setQrUrl(null);
         setQrImage(null);
         setPincode(null);
-        dispatch({ type: "connect", accountId: payload.accountId, accountName: payload.accountName });
+        dispatch({ type: "connect", accountId: String(payload.accountId), accountName: String(payload.accountName) });
         toast.success("LINE account connected");
       }
       if (eventType === "status" && payload.status === "running") dispatch({ type: "start" });
+      if (eventType === "reconnecting") dispatch({ type: "reconnecting", message: String(payload.message || "Reconnecting to LINE") });
       if (eventType === "stopped") dispatch({ type: "stop" });
       if (eventType === "error") toast.error(payload.message);
     });
@@ -65,6 +71,7 @@ export default function LineServicePage() {
     dispatch({ type: "connecting" });
     updateLineService({ status: "connecting", message: "Waiting for LINE login" });
     try {
+      clearLineCaptureQueue();
       await invoke("stop_line_service");
       await invoke("start_line_service");
     } catch (error) { toast.error(error instanceof Error ? error.message : String(error)); }
@@ -77,19 +84,17 @@ export default function LineServicePage() {
   };
 
   const handleStop = () => {
+    clearLineCaptureQueue();
     void invoke("stop_line_service").then(() => { dispatch({ type: "stop" }); updateLineService({ status: "stopped", message: "Service is stopped" }); toast.success("LINE Service stopped"); }).catch((error) => toast.error(error instanceof Error ? error.message : String(error)));
   };
 
-  useEffect(() => {
-    const handleContextAction = (event: Event) => {
-      const action = (event as CustomEvent<string>).detail;
-      if (action === "line:login") void handleLogin();
-      if (action === "line:start") handleStart();
-      if (action === "line:stop") handleStop();
-    };
-    window.addEventListener("crtl:context-action", handleContextAction);
-    return () => window.removeEventListener("crtl:context-action", handleContextAction);
-  });
+  const handleDisconnect = () => {
+    clearLineCaptureQueue();
+    void invoke("stop_line_service").finally(() => {
+      dispatch({ type: "disconnect" });
+      updateLineService({ accountId: null, accountName: null, status: "disconnected", message: "Connect a LINE account to start" });
+    });
+  };
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex min-h-full items-center justify-center py-10">
@@ -114,7 +119,7 @@ export default function LineServicePage() {
                 <p className="text-xs text-[var(--muted-foreground)]">{state.accountId ? "Connected" : "Not connected"}</p>
               </div>
             </div>
-            <button type="button" onClick={state.accountId ? () => dispatch({ type: "disconnect" }) : handleLogin} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] transition hover:brightness-125">
+            <button type="button" onClick={state.accountId ? handleDisconnect : handleLogin} className="flex items-center gap-1.5 text-xs font-semibold text-[var(--primary)] transition hover:brightness-125">
               <HugeiconsIcon icon={state.accountId ? RefreshIcon : Link01Icon} size={14} />
               {state.accountId ? "Change" : "Login"}
             </button>
@@ -125,20 +130,20 @@ export default function LineServicePage() {
               <p className="text-sm font-semibold text-[var(--foreground)]">{statusLabels[state.status]}</p>
               <p className="mt-1 text-xs text-[var(--muted-foreground)]">{state.message}</p>
             </div>
-            <span className={`h-3 w-3 rounded-full ${isRunning ? "bg-[var(--success)] shadow-[0_0_0_5px_rgba(34,197,94,0.12)]" : "bg-[var(--muted-foreground)]/40"}`} />
+            <span className={`h-3 w-3 rounded-full ${isRunning ? "bg-[var(--success)] shadow-[0_0_0_5px_rgba(34,197,94,0.12)]" : state.status === "reconnecting" ? "animate-pulse bg-[var(--warning)]" : "bg-[var(--muted-foreground)]/40"}`} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <button type="button" onClick={handleStart} disabled={isRunning || !state.accountId} className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--primary)] text-sm font-bold text-[var(--primary-foreground)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
+            <button type="button" onClick={handleStart} disabled={isListening || !state.accountId} className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] bg-[var(--primary)] text-sm font-bold text-[var(--primary-foreground)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40">
               <HugeiconsIcon icon={PlayIcon} size={18} />Start
             </button>
-            <button type="button" onClick={handleStop} disabled={!isRunning} className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-transparent text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40">
+            <button type="button" onClick={handleStop} disabled={!isListening} className="flex h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-transparent text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40">
               <HugeiconsIcon icon={StopIcon} size={18} />Stop
             </button>
           </div>
         </div>
 
-        <p className="mt-5 text-center text-xs text-[var(--muted-foreground)]">{isRunning ? "Listening for incoming messages" : "Service is not listening"}</p>
+        <p className="mt-5 text-center text-xs text-[var(--muted-foreground)]">{isRunning ? "Listening for incoming messages" : state.status === "reconnecting" ? "Reconnecting automatically" : "Service is not listening"}</p>
       </section>
     </motion.div>
   );

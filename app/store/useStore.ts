@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import { Card, Settings } from "../types";
-import { initialCaptureState, lineCaptureReducer, LineCaptureState } from "../line/captureState";
+import {
+  initialCaptureState,
+  lineCaptureReducer,
+  LineCaptureAction,
+  LineCaptureState,
+  LINE_PENDING_TEXT_TTL_MS,
+} from "../line/captureState";
 import { LineServiceStatus } from "../line/serviceState";
 import {
   clearCards,
@@ -32,10 +38,11 @@ interface AppState {
   moveCardToBottom: (id: string, direction?: "asc" | "desc") => Promise<void>;
   updateSettings: (settings: Partial<Settings>) => Promise<void>;
   updateLineService: (value: Partial<AppState["lineService"]>) => void;
-  receiveLineImage: (dataUrl: string) => void;
-  receiveLineText: (text: string) => void;
+  receiveLineCaptureEvent: (event: LineCaptureAction) => LineCaptureState["notice"];
   copyLineImage: (index: number) => void;
-  clearLineCapture: () => void;
+  discardActiveLineCapture: () => void;
+  completeLineCapture: (id: string) => void;
+  clearLineCaptureQueue: () => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -97,8 +104,20 @@ export const useStore = create<AppState>((set, get) => ({
     await write;
   },
   updateLineService: (value) => set((state) => ({ lineService: { ...state.lineService, ...value } })),
-  receiveLineImage: (dataUrl) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "image", dataUrl }) })),
-  receiveLineText: (text) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "text", text }) })),
+  receiveLineCaptureEvent: (event) => {
+    const next = lineCaptureReducer(get().lineCapture, event);
+    set({ lineCapture: next });
+    if (event.type === "text") {
+      window.setTimeout(() => {
+        set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "expire", now: Date.now() }) }));
+      }, LINE_PENDING_TEXT_TTL_MS + 50);
+    }
+    return next.notice;
+  },
   copyLineImage: (index) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "copy-image", index }) })),
-  clearLineCapture: () => set({ lineCapture: initialCaptureState }),
+  discardActiveLineCapture: () => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "discard-active" }) })),
+  completeLineCapture: (id) => set((state) => ({ lineCapture: lineCaptureReducer(state.lineCapture, { type: "complete-capture", id }) })),
+  clearLineCaptureQueue: () => set((state) => ({
+    lineCapture: lineCaptureReducer(state.lineCapture, { type: "clear-queue" }),
+  })),
 }));

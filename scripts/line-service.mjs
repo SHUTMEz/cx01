@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { FileStorage } from "@jsr/evex__linejs/storage";
 import { loginWithAuthToken, loginWithQR, TalkMessage } from "@jsr/evex__linejs";
-import { classifyLineMessage, isImageMimeType, pollLineMessages, shouldCaptureLineMessage } from "./line-message.mjs";
+import { classifyLineMessage, dispatchLineMessages, isAuthenticationError, isImageMimeType, pollLineMessages, shouldCaptureLineMessage } from "./line-message.mjs";
 
 const storagePath = process.argv[process.argv.indexOf("--storage") + 1];
 if (!storagePath) throw new Error("Missing --storage path");
@@ -14,6 +14,8 @@ const storage = new FileStorage(storagePath);
 const tokenPath = `${storagePath}.token`;
 let client;
 let listening = false;
+let captureSequence = 0;
+let captureGeneration = 0;
 
 try {
   emit("status", { status: "connecting" });
@@ -38,17 +40,28 @@ try {
   process.exitCode = 1;
 }
 
-const handleMessage = async (message) => {
-  if (!shouldCaptureLineMessage(message)) return;
+const handleMessage = async (message, generation) => {
+  if (!listening || generation !== captureGeneration || !shouldCaptureLineMessage(message)) return;
   const contentType = message.raw.contentType;
+  const messageId = String(message.raw.id);
+  const chatId = String(message.isMyMessage ? message.to.id : message.from.id);
+  const sequence = ++captureSequence;
+  const receivedAt = Date.now();
   try {
     const messageKind = classifyLineMessage(contentType);
     if (messageKind === "image") {
-      const data = await message.getData();
-      const mimeType = isImageMimeType(data.type) ? data.type : "image/jpeg";
-      emit("image", { messageId: message.raw.id, chatId: message.to, mimeType, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+      emit("image-pending", { messageId, chatId, sequence, receivedAt });
+      try {
+        const data = await message.getData();
+        if (!listening || generation !== captureGeneration) return;
+        const mimeType = isImageMimeType(data.type) ? data.type : "image/jpeg";
+        emit("image-loaded", { messageId, chatId, sequence, receivedAt, mimeType, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+      } catch (error) {
+        if (!listening || generation !== captureGeneration) return;
+        emit("image-error", { messageId, chatId, sequence, receivedAt, message: error instanceof Error ? error.message : String(error) });
+      }
     } else if (messageKind === "text") {
-      emit("text", { messageId: message.raw.id, chatId: message.to, text: message.text });
+      emit("text", { messageId, chatId, sequence, receivedAt, text: message.text });
     } else {
       // Some LINE events have a missing/extended content type after E2EE
       // decoding. Keep the capture flow useful for ordinary text messages.
@@ -56,7 +69,8 @@ const handleMessage = async (message) => {
       try {
         const data = await message.getData();
         if (isImageMimeType(data.type)) {
-          emit("image", { messageId: message.raw.id, chatId: message.to, mimeType: data.type, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+          if (!listening || generation !== captureGeneration) return;
+          emit("image-loaded", { messageId, chatId, sequence, receivedAt, mimeType: data.type, data: Buffer.from(await data.arrayBuffer()).toString("base64") });
           recoveredImage = true;
         }
       } catch {
@@ -64,7 +78,7 @@ const handleMessage = async (message) => {
       }
       if (recoveredImage) return;
       if (typeof message.text === "string" && message.text.trim()) {
-        emit("text", { messageId: message.raw.id, chatId: message.to, text: message.text });
+        emit("text", { messageId, chatId, sequence, receivedAt, text: message.text });
       } else {
         emit("log", { message: `Ignored unsupported LINE message type: ${String(contentType)}` });
       }
@@ -78,16 +92,34 @@ const input = createInterface({ input: process.stdin });
 input.on("line", (line) => {
   if (line.trim() === "start" && client && !listening) {
     listening = true;
+    const generation = ++captureGeneration;
     emit("status", { status: "running" });
     void (async () => {
-      for await (const raw of pollLineMessages(client, (error) => emit("error", { message: error instanceof Error ? error.message : String(error) }))) {
-        if (!listening) break;
-        await handleMessage(new TalkMessage({ raw, client }));
-      }
+      const messages = pollLineMessages(client, {
+        onReconnecting: (_error, attempt) => emit("reconnecting", {
+          attempt,
+          message: `Connection interrupted. Retry ${attempt} of 3`,
+        }),
+        onRunning: () => emit("status", { status: "running" }),
+        onStopped: (error) => {
+          listening = false;
+          captureGeneration += 1;
+          emit("error", {
+            message: isAuthenticationError(error)
+              ? "LINE session expired. Please login again."
+              : "LINE connection failed after 3 retries.",
+          });
+          emit("stopped");
+        },
+      });
+      await dispatchLineMessages(messages, async (raw) => {
+        await handleMessage(new TalkMessage({ raw, client }), generation);
+      }, (error) => emit("error", { message: error instanceof Error ? error.message : String(error) }));
     })().catch((error) => emit("error", { message: error instanceof Error ? error.message : String(error) }));
   }
   if (line.trim() === "stop") {
     listening = false;
+    captureGeneration += 1;
     input.close();
     process.exit(0);
   }

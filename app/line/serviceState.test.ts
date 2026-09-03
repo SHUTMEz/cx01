@@ -31,3 +31,14 @@ test("stopping a running service returns it to stopped", () => {
   assert.equal(stopped.status, "stopped");
   assert.equal(stopped.message, "Service is stopped");
 });
+
+test("shows reconnecting without losing the connected account", () => {
+  const state = lineServiceReducer(
+    { ...initialLineServiceState, accountId: "line-user-1", accountName: "CXKE", status: "running" },
+    { type: "reconnecting", message: "Retry 1 of 3" },
+  );
+
+  assert.equal(state.status, "reconnecting");
+  assert.equal(state.message, "Retry 1 of 3");
+  assert.equal(state.accountId, "line-user-1");
+});

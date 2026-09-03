@@ -50,14 +50,6 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    const handleContextAction = (event: Event) => {
-      if ((event as CustomEvent<string>).detail === "cards:view-table") setViewMode("table");
-    };
-    window.addEventListener("crtl:context-action", handleContextAction);
-    return () => window.removeEventListener("crtl:context-action", handleContextAction);
-  });
-
   const handleCopyText = async (card: Card) => {
     const fullText = settings.useEndText && settings.endText ? `${card.text}\n\n${settings.endText}` : card.text;
     try {
